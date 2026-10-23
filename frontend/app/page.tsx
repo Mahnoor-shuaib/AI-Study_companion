@@ -2,27 +2,37 @@
 
 import { useState } from "react";
 
+type StudyPlan = {
+  topic: string;
+  summary: string;
+  key_points: string[];
+  study_steps: string[];
+};
+
+const API_BASE = "http://127.0.0.1:8000";
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
-  const [uploadMessage, setUploadMessage] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [topic, setTopic] = useState("");
-  const [studyPlan, setStudyPlan] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [upload, setUpload] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const API_BASE = "http://127.0.0.1:8000";
+  const [topic, setTopic] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState<StudyPlan | null>(null);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState<number[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setUploadMessage("");
+      setUpload(null);
     }
   };
 
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
-    setUploadMessage("");
+    setUpload(null);
     const formData = new FormData();
     formData.append("file", file);
 
@@ -31,163 +41,216 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
+      if (!res.ok) throw new Error("upload failed");
       const data = await res.json();
-      setUploadMessage(`✓ Stored ${data.total_chunks} chunks successfully`);
-    } catch (err) {
-      setUploadMessage("✗ Upload failed. Check backend server.");
+      setUpload({ ok: true, text: `Saved ${data.total_chunks} chunks from ${file.name}.` });
+    } catch {
+      setUpload({
+        ok: false,
+        text: "Upload failed. Check that the backend is running on port 8000.",
+      });
     } finally {
       setUploading(false);
     }
   };
 
-  const handleGeneratePlan = async () => {
-    if (!topic) return;
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topic.trim()) return;
     setLoading(true);
-    setStudyPlan(null);
+    setPlan(null);
+    setError("");
+    setDone([]);
 
     try {
       const res = await fetch(`${API_BASE}/study-plan?topic=${encodeURIComponent(topic)}`);
-      const data = await res.json();
-      setStudyPlan(data);
-    } catch (err) {
-      setStudyPlan({ error: "Failed to generate study plan." });
+      if (!res.ok) throw new Error("plan failed");
+      const data: StudyPlan = await res.json();
+      setPlan(data);
+    } catch {
+      setError("Couldn't build a plan. Check the backend terminal for the error, then try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleStep = (i: number) =>
+    setDone((prev) => (prev.includes(i) ? prev.filter((n) => n !== i) : [...prev, i]));
+
   return (
-    <main className="min-h-screen bg-[#0f0c29] bg-gradient-to-br from-[#1a1a3e] via-[#2d1b4e] to-[#1a1a3e]">
-      {/* Top Nav Bar */}
-      <nav className="border-b border-white/10 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xl shadow-lg shadow-violet-500/30">
-            🧠
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-lg leading-tight">Study Companion</h1>
-            <p className="text-violet-300/70 text-xs">AI-powered notes & study plans</p>
-          </div>
-        </div>
-      </nav>
+    <main
+      className="min-h-screen bg-[#F3F7FB] text-[#14213D]"
+      style={{
+        backgroundImage:
+          "linear-gradient(#DCE6F2 1px, transparent 1px), linear-gradient(90deg, #DCE6F2 1px, transparent 1px)",
+        backgroundSize: "28px 28px",
+      }}
+    >
+      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+        <header className="mb-10 max-w-xl">
+          <h1 className="font-[family-name:var(--font-display)] text-4xl font-extrabold tracking-tight sm:text-5xl">
+            Study Companion
+          </h1>
+          <p className="mt-3 text-base leading-relaxed text-[#14213D]/70">
+            Upload your lecture notes, name a topic, and get a plan built only from what your
+            notes say.
+          </p>
+        </header>
 
-      <div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
-        {/* Upload Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-white/[0.06] border border-white/10 backdrop-blur-xl p-8 shadow-2xl">
-          <div className="absolute -top-16 -right-16 w-48 h-48 bg-violet-600/20 rounded-full blur-3xl" />
-
-          <div className="relative flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/30">
-              1
-            </span>
-            <h2 className="text-xl font-semibold text-white">Upload Your Notes</h2>
-          </div>
-
-          <label className="relative flex flex-col items-center justify-center border-2 border-dashed border-violet-400/30 rounded-2xl p-10 cursor-pointer hover:border-violet-400/60 hover:bg-violet-500/5 transition-all duration-200 group">
-            <input type="file" accept=".txt,.pdf,.docx,.pptx" onChange={handleFileChange} className="hidden" />
-            <div className="w-12 h-12 rounded-full bg-violet-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              <span className="text-2xl">{file ? "📄" : "📁"}</span>
-            </div>
-            <span className="text-violet-200 text-sm font-medium">
-              {file ? file.name : "Click to select a file"}
-            </span>
-            <span className="text-violet-400/60 text-xs mt-1">.txt, .pdf, .docx, .pptx supported</span>
-          </label>
-
-          <button
-            onClick={handleUpload}
-            disabled={!file || uploading}
-            className="relative mt-5 w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-3 rounded-xl hover:shadow-lg hover:shadow-violet-500/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            {uploading ? "Uploading..." : "Upload & Store"}
-          </button>
-
-          {uploadMessage && (
-            <p className={`relative mt-4 text-sm font-medium ${uploadMessage.startsWith("✓") ? "text-emerald-400" : "text-rose-400"}`}>
-              {uploadMessage}
+        <div className="grid items-start gap-8 lg:grid-cols-[340px_1fr]">
+          {/* Left: notes */}
+          <section className="rounded-md border border-[#14213D]/15 bg-white p-6 shadow-[4px_4px_0_0_#14213D]">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-bold">
+              Your notes
+            </h2>
+            <p className="mt-1 text-sm text-[#14213D]/60">
+              PDF, PowerPoint, Word or plain text.
             </p>
-          )}
-        </div>
 
-        {/* Study Plan Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-white/[0.06] border border-white/10 backdrop-blur-xl p-8 shadow-2xl">
-          <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-fuchsia-600/20 rounded-full blur-3xl" />
-
-          <div className="relative flex items-center gap-3 mb-6">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/30">
-              2
-            </span>
-            <h2 className="text-xl font-semibold text-white">Generate Study Plan</h2>
-          </div>
-
-          <div className="relative flex gap-3">
-            <input
-              type="text"
-              placeholder="e.g. required skills, protocols..."
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="flex-1 bg-white/5 border border-white/10 text-white placeholder-violet-300/40 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-            />
-            <button
-              onClick={handleGeneratePlan}
-              disabled={!topic || loading}
-              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-violet-500/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 whitespace-nowrap"
-            >
-              {loading ? "Generating..." : "Generate ✨"}
-            </button>
-          </div>
-
-          {loading && (
-            <div className="relative mt-6 flex items-center gap-2 text-violet-300 text-sm">
-              <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-              Analyzing your notes...
-            </div>
-          )}
-
-          {studyPlan && !studyPlan.error && (
-            <div className="relative mt-6 bg-gradient-to-br from-white/[0.08] to-white/[0.04] border border-white/10 rounded-2xl p-7">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent mb-3">
-                {studyPlan.topic}
-              </h3>
-              <p className="text-white text-base mb-6 leading-relaxed">{studyPlan.summary}</p>
-
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-sm font-bold text-fuchsia-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    🔑 Key Points
-                  </h4>
-                  <ul className="space-y-3">
-                    {studyPlan.key_points?.map((point: string, i: number) => (
-                      <li key={i} className="text-base text-white/90 flex gap-2 leading-relaxed">
-                        <span className="text-fuchsia-400 mt-0.5">•</span>
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold text-violet-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    ✅ Study Steps
-                  </h4>
-                  <ul className="space-y-3">
-                    {studyPlan.study_steps?.map((step: string, i: number) => (
-                      <li key={i} className="text-base text-white/90 flex gap-2 leading-relaxed">
-                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-violet-500/30 text-violet-200 text-xs font-bold mt-0.5 shrink-0">
-                          {i + 1}
-                        </span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            <label className="mt-5 block cursor-pointer">
+              <input
+                type="file"
+                accept=".txt,.pdf,.docx,.pptx"
+                onChange={handleFileChange}
+                className="peer sr-only"
+              />
+              <div className="rounded-sm border-2 border-dashed border-[#14213D]/30 px-4 py-8 text-center transition-colors hover:border-[#14213D] hover:bg-[#F3F7FB] peer-focus-visible:ring-2 peer-focus-visible:ring-[#14213D] peer-focus-visible:ring-offset-2">
+                {file ? (
+                  <>
+                    <span className="block break-words text-sm font-semibold">{file.name}</span>
+                    <span className="mt-1 block text-xs text-[#14213D]/60">
+                      Click to choose a different file
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold">Choose a file from your computer</span>
+                )}
               </div>
-            </div>
-          )}
+            </label>
 
-          {studyPlan?.error && (
-            <p className="relative mt-4 text-sm text-rose-400">{studyPlan.error}</p>
-          )}
+            <button
+              onClick={handleUpload}
+              disabled={!file || uploading}
+              className="mt-4 w-full rounded-sm bg-[#14213D] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1f3260] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14213D] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {uploading ? "Saving notes…" : "Save notes"}
+            </button>
+
+            {upload && (
+              <p
+                role="status"
+                className={`mt-4 text-sm font-medium ${
+                  upload.ok ? "text-emerald-700" : "text-red-700"
+                }`}
+              >
+                {upload.text}
+              </p>
+            )}
+          </section>
+
+          {/* Right: the sheet */}
+          <section className="min-h-[28rem] rounded-md border border-[#14213D]/15 bg-white shadow-[4px_4px_0_0_#14213D]">
+            <div className="border-l-[3px] border-[#F08A8A] ml-8 sm:ml-12 px-6 py-7 sm:px-8">
+              <form onSubmit={handleGenerate}>
+                <label
+                  htmlFor="topic"
+                  className="font-[family-name:var(--font-display)] text-xl font-bold"
+                >
+                  What do you want to study?
+                </label>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                  <input
+                    id="topic"
+                    type="text"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="For example: structures, prototyping"
+                    className="flex-1 rounded-sm border border-[#14213D]/30 bg-white px-4 py-3 text-sm placeholder:text-[#14213D]/40 focus:border-[#14213D] focus:outline-2 focus:outline-offset-2 focus:outline-[#14213D]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!topic.trim() || loading}
+                    className="rounded-sm bg-[#FFE45C] px-6 py-3 text-sm font-bold text-[#14213D] ring-1 ring-[#14213D] transition-colors hover:bg-[#ffd92e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14213D] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {loading ? "Building…" : "Build study plan"}
+                  </button>
+                </div>
+              </form>
+
+              {loading && (
+                <p role="status" className="mt-8 flex items-center gap-3 text-sm text-[#14213D]/70">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#14213D] border-t-transparent motion-reduce:animate-none" />
+                  Reading your notes…
+                </p>
+              )}
+
+              {error && (
+                <p role="alert" className="mt-8 text-sm font-medium text-red-700">
+                  {error}
+                </p>
+              )}
+
+              {!plan && !loading && !error && (
+                <p className="mt-8 max-w-[52ch] text-sm leading-relaxed text-[#14213D]/60">
+                  Save a file on the left, then type a topic from it. Your plan will appear on
+                  this page.
+                </p>
+              )}
+
+              {plan && (
+                <article className="mt-8">
+                  <h3 className="font-[family-name:var(--font-display)] text-3xl font-extrabold leading-tight">
+                    {plan.topic}
+                  </h3>
+                  <p className="mt-4 max-w-[65ch] text-base leading-relaxed">{plan.summary}</p>
+
+                  <h4 className="mt-9 font-[family-name:var(--font-display)] text-lg font-bold">
+                    Key points
+                  </h4>
+                  <ul className="mt-3 max-w-[65ch] space-y-3">
+                    {plan.key_points?.map((point, i) => (
+                      <li key={i} className="text-base leading-relaxed">
+                        <span className="box-decoration-clone bg-[#FFE45C]/70 px-1">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-9 flex items-baseline justify-between gap-4">
+                    <h4 className="font-[family-name:var(--font-display)] text-lg font-bold">
+                      Study steps
+                    </h4>
+                    <span className="text-sm text-[#14213D]/60">
+                      {done.length} of {plan.study_steps?.length ?? 0} done
+                    </span>
+                  </div>
+                  <ol className="mt-3 max-w-[65ch] space-y-2">
+                    {plan.study_steps?.map((step, i) => {
+                      const checked = done.includes(i);
+                      return (
+                        <li key={i}>
+                          <label className="flex cursor-pointer items-start gap-3 rounded-sm px-2 py-2 hover:bg-[#F3F7FB]">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleStep(i)}
+                              className="mt-1 h-4 w-4 shrink-0 accent-[#14213D]"
+                            />
+                            <span
+                              className={`text-base leading-relaxed ${
+                                checked ? "text-[#14213D]/45 line-through" : ""
+                              }`}
+                            >
+                              {step}
+                            </span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </article>
+              )}
+            </div>
+          </section>
         </div>
       </div>
     </main>
