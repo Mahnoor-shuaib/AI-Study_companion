@@ -1,10 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
 from chunking import chunk_text
 from embeddings import get_embedding
-from qdrant_client_setup import create_collection_if_not_exists, store_chunks, search_chunks
+from qdrant_client_setup import create_collection_if_not_exists, store_chunks, search_chunks, search_chunks_with_scores
 from study_plan import generate_study_plan
 from file_reader import extract_text
 
@@ -74,8 +74,18 @@ def search(query: str):
     results = search_chunks(query)
     return {"query": query, "results": results}
 
+@app.get("/search-scores")
+def search_scores(query: str):
+    results = search_chunks_with_scores(query)
+    return {"query": query, "results": results}
+
 @app.get("/study-plan")
 def study_plan(topic: str):
     chunks = search_chunks(topic)
+    if not chunks:
+        raise HTTPException(
+            status_code=404,
+            detail="Your notes don't seem to cover this topic. Try a topic from your uploaded files.",
+        )
     plan = generate_study_plan(topic, chunks)
     return plan

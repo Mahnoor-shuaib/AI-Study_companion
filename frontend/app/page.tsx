@@ -68,7 +68,7 @@ export default function Home() {
       const data: StudyPlan = await res.json();
       setPlan(data);
     } catch {
-      setError("Couldn't build a plan. Check the backend terminal for the error, then try again.");
+      setError("Your notes don't seem to cover this topic. Try a topic from your uploaded files.");
     } finally {
       setLoading(false);
     }

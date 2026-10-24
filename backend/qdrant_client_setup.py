@@ -35,11 +35,23 @@ def store_chunks(chunks: list[str], embeddings: list[list[float]]):
     ]
     client.upsert(collection_name=COLLECTION_NAME, points=points)
 
-def search_chunks(query: str, top_k: int = 5):
+def search_chunks(query: str, top_k: int = 5, min_score: float = 0.4):
     query_embedding = get_embedding(query)
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
         limit=top_k
     ).points
-    return [r.payload["text"] for r in results]
+    return [r.payload["text"] for r in results if r.score >= min_score]
+
+def search_chunks_with_scores(query: str, top_k: int = 5):
+    query_embedding = get_embedding(query)
+    results = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=query_embedding,
+        limit=top_k
+    ).points
+    return [
+        {"score": round(r.score, 3), "text": r.payload["text"]}
+        for r in results
+    ]

@@ -15,7 +15,8 @@ def generate_study_plan(topic: str, chunks: list[str]) -> dict:
 Notes:
 {context}
 
-Write a thorough, well-explained summary (at least 4-5 sentences) that properly defines and explains the topic using the notes.
+Answer exactly what the topic asks. If the topic names a specific aspect of a subject (for example limitations, types, advantages or steps), start the summary directly with that aspect. Do not begin with a general definition or introduction of the wider subject unless the topic asks for it. Write the summary in at least 4-5 sentences, using only facts that are in the notes. Make the key points and study steps focus on the same aspect.
+Use the exact terms, definitions and wording from the notes wherever possible. Do not replace the notes' terminology with synonyms or your own phrasing. State definitions the way the notes state them.
 Include at least 5 key points and at least 5 study steps, going into good detail.
 
 Return ONLY valid JSON (no markdown, no extra text) in this exact format:
