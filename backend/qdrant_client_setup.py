@@ -24,12 +24,17 @@ def create_collection_if_not_exists():
             vectors_config=VectorParams(size=384, distance=Distance.COSINE)
         )
 
-def store_chunks(chunks: list[str], embeddings: list[list[float]]):
+def store_chunks(chunks: list[str], embeddings: list[list[float]], source_file: str, doc_type: str = "notes"):
     points = [
         PointStruct(
             id=str(uuid.uuid4()),
             vector=embeddings[i],
-            payload={"text": chunks[i]}
+            payload={
+                "text": chunks[i],
+                "source_file": source_file,
+                "doc_type": doc_type,
+                "chunk_id": i,
+            },
         )
         for i in range(len(chunks))
     ]

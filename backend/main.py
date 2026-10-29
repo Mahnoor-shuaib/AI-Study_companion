@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
@@ -51,13 +51,14 @@ async def test_embedding(file: UploadFile = File(...)):
         "sample_values": first_embedding[:5]
     }
 
-@app.post("/setup-collection")
-def setup_collection():
-    create_collection_if_not_exists()
-    return {"message": "Collection ready"}
-
 @app.post("/store-document")
-async def store_document(file: UploadFile = File(...)):
+async def store_document(
+    file: UploadFile = File(...),
+    doc_type: str = Form("notes"),
+):
+    if doc_type not in ("notes", "past_paper"):
+        raise HTTPException(status_code=400, detail="doc_type must be 'notes' or 'past_paper'")
+
     file_path = os.path.join(UPLOAD_DIR, file.filename)
     with open(file_path, "wb") as buffer:
         content = await file.read()
@@ -66,8 +67,13 @@ async def store_document(file: UploadFile = File(...)):
     text = extract_text(file_path)
     chunks = chunk_text(text)
     embeddings = [get_embedding(chunk) for chunk in chunks]
-    store_chunks(chunks, embeddings)
-    return {"message": "Document stored successfully", "total_chunks": len(chunks)}
+    store_chunks(chunks, embeddings, source_file=file.filename, doc_type=doc_type)
+    return {
+        "message": "Document stored successfully",
+        "total_chunks": len(chunks),
+        "source_file": file.filename,
+        "doc_type": doc_type,
+    }
 
 @app.get("/search")
 def search(query: str):
