@@ -50,6 +50,10 @@ async def test_embedding(file: UploadFile = File(...)):
         "embedding_length": len(first_embedding),
         "sample_values": first_embedding[:5]
     }
+@app.post("/setup-collection")
+def setup_collection():
+    create_collection_if_not_exists()
+    return {"message": "Collection ready"}
 
 @app.post("/store-document")
 async def store_document(
@@ -76,9 +80,11 @@ async def store_document(
     }
 
 @app.get("/search")
-def search(query: str):
-    results = search_chunks(query)
-    return {"query": query, "results": results}
+def search(query: str, doc_type: str | None = None):
+    if doc_type is not None and doc_type not in ("notes", "past_paper"):
+        raise HTTPException(status_code=400, detail="doc_type must be 'notes' or 'past_paper'")
+    results = search_chunks(query, doc_type=doc_type)
+    return {"query": query, "doc_type": doc_type, "results": results}
 
 @app.get("/search-scores")
 def search_scores(query: str):
