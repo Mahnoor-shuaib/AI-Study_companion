@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AgentPanel from "../components/AgentPanel";
 
 type StudyPlan = {
   topic: string;
@@ -252,6 +253,7 @@ export default function Home() {
             </div>
           </section>
         </div>
+        <AgentPanel />
       </div>
     </main>
   );
