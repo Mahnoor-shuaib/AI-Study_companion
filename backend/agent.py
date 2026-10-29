@@ -39,3 +39,21 @@ Student request: {user_request}"""
         return "clarify"
 
     return intent if intent in INTENTS else "clarify"
+
+def extract_topic(user_request: str) -> str:
+    prompt = f"""Extract the main study topic from the student's request.
+Reply with ONLY a short topic phrase (2 to 6 words), with no extra text, no quotes, and no punctuation at the end.
+
+Examples:
+"Summarize the information security topic" -> information security
+"Make a quiz on structures" -> structures
+
+Student request: {user_request}"""
+
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+    )
+    topic = response.choices[0].message.content.strip().strip('"').strip()
+    return topic or user_request

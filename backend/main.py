@@ -6,6 +6,7 @@ from chunking import chunk_text
 from embeddings import get_embedding
 from qdrant_client_setup import create_collection_if_not_exists, store_chunks, search_chunks, search_chunks_with_scores
 from study_plan import generate_study_plan
+from agent import detect_intent, extract_topic
 from file_reader import extract_text
 
 app = FastAPI()
@@ -101,3 +102,31 @@ def study_plan(topic: str):
         )
     plan = generate_study_plan(topic, chunks)
     return plan
+@app.get("/agent")
+def agent(request: str, doc_type: str | None = None):
+    intent = detect_intent(request)
+
+    if intent == "clarify":
+        return {
+            "intent": intent,
+            "answer": "Ye sawal aapke notes se related nahi lag raha. Kisi topic ka naam likhein, jaise 'structures' ya 'threats'.",
+        }
+
+    if intent in ("search", "summary"):
+        topic = extract_topic(request)
+        chunks = search_chunks(topic, doc_type=doc_type)
+        if not chunks:
+            return {
+                "intent": intent,
+                "topic": topic,
+                "answer": "Ye topic aapke notes me nahi mila.",
+            }
+        if intent == "search":
+            return {"intent": intent, "topic": topic, "results": chunks}
+        plan = generate_study_plan(topic, chunks)
+        return {"intent": intent, "topic": topic, "answer": plan}
+
+    return {
+        "intent": intent,
+        "answer": "Ye feature abhi ban raha hai. Quiz aur past paper agle step me aayenge.",
+    }
