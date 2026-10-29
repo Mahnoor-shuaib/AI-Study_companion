@@ -111,7 +111,7 @@ def agent(request: str, doc_type: str | None = None):
     if intent == "clarify":
         return {
             "intent": intent,
-            "answer": "Ye sawal aapke notes se related nahi lag raha. Kisi topic ka naam likhein, jaise 'structures' ya 'threats'.",
+            "answer": "This question does not seem related to your notes. Please enter a topic name, such as 'structures' or 'threats'",
         }
 
     if intent in ("search", "summary"):
@@ -121,7 +121,7 @@ def agent(request: str, doc_type: str | None = None):
             return {
                 "intent": intent,
                 "topic": topic,
-                "answer": "Ye topic aapke notes me nahi mila.",
+                "answer": "This topic was not found in your notes.",
             }
         if intent == "search":
             return {"intent": intent, "topic": topic, "results": chunks}
@@ -134,7 +134,7 @@ def agent(request: str, doc_type: str | None = None):
             return {
                 "intent": intent,
                 "topic": topic,
-                "answer": "Ye topic aapke notes me nahi mila.",
+                "answer": "This topic was not found in your notes.",
             }
         quiz = generate_quiz(topic, chunks)
         return {"intent": intent, "topic": topic, "answer": quiz}
@@ -145,11 +145,11 @@ def agent(request: str, doc_type: str | None = None):
             return {
                 "intent": intent,
                 "topic": topic,
-                "answer": "Is topic ka koi past paper material upload nahi hua. Pehle past paper ko doc_type 'past_paper' ke saath upload karein.",
+                "answer": "No past paper material was found for this topic. Please upload a past paper with doc_type 'past_paper' first.",
             }
         questions = generate_past_questions(topic, chunks)
         return {"intent": intent, "topic": topic, "answer": questions}
     return {
            "intent": intent,
-           "answer": "Is sawal ko samajh nahi aaya. Kisi topic ke baare me poochein, jaise 'structures' ya 'threats'.",
+           "answer": "I could not understand this question. Please ask about a topic, such as 'structures' or 'threats'.",
        }

@@ -46,7 +46,7 @@ Notes:
         return {
             "topic": topic,
             "questions": [],
-            "error": "Quiz generate nahi ho saka. Dobara try karein.",
+            "error": "The quiz could not be generated. Please try again.",
         }
 def generate_past_questions(topic: str, chunks: list[str], num_questions: int = 5) -> dict:
     context = "\n\n".join(chunks)
@@ -84,5 +84,5 @@ Past paper material:
         return {
             "topic": topic,
             "questions": [],
-            "error": "Past paper questions generate nahi ho sake. Dobara try karein.",
+            "error": "Past paper questions could not be generated. Please try again.",
         }    
