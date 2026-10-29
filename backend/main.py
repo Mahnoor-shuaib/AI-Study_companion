@@ -7,6 +7,7 @@ from embeddings import get_embedding
 from qdrant_client_setup import create_collection_if_not_exists, store_chunks, search_chunks, search_chunks_with_scores
 from study_plan import generate_study_plan
 from agent import detect_intent, extract_topic
+from quiz import generate_quiz
 from file_reader import extract_text
 
 app = FastAPI()
@@ -102,6 +103,7 @@ def study_plan(topic: str):
         )
     plan = generate_study_plan(topic, chunks)
     return plan
+
 @app.get("/agent")
 def agent(request: str, doc_type: str | None = None):
     intent = detect_intent(request)
@@ -125,8 +127,20 @@ def agent(request: str, doc_type: str | None = None):
             return {"intent": intent, "topic": topic, "results": chunks}
         plan = generate_study_plan(topic, chunks)
         return {"intent": intent, "topic": topic, "answer": plan}
+    if intent == "quiz":
+        topic = extract_topic(request)
+        chunks = search_chunks(topic, doc_type=doc_type)
+        if not chunks:
+            return {
+                "intent": intent,
+                "topic": topic,
+                "answer": "Ye topic aapke notes me nahi mila.",
+            }
+        quiz = generate_quiz(topic, chunks)
+        return {"intent": intent, "topic": topic, "answer": quiz}
 
     return {
         "intent": intent,
-        "answer": "Ye feature abhi ban raha hai. Quiz aur past paper agle step me aayenge.",
+        "answer": "Ye feature abhi ban raha hai. Past paper agle step me aayega.",
+        
     }
