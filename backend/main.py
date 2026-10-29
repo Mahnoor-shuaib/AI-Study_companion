@@ -7,7 +7,7 @@ from embeddings import get_embedding
 from qdrant_client_setup import create_collection_if_not_exists, store_chunks, search_chunks, search_chunks_with_scores
 from study_plan import generate_study_plan
 from agent import detect_intent, extract_topic
-from quiz import generate_quiz
+from quiz import generate_quiz, generate_past_questions
 from file_reader import extract_text
 
 app = FastAPI()
@@ -138,9 +138,18 @@ def agent(request: str, doc_type: str | None = None):
             }
         quiz = generate_quiz(topic, chunks)
         return {"intent": intent, "topic": topic, "answer": quiz}
-
+    if intent == "past_paper":
+        topic = extract_topic(request)
+        chunks = search_chunks(topic, doc_type="past_paper")
+        if not chunks:
+            return {
+                "intent": intent,
+                "topic": topic,
+                "answer": "Is topic ka koi past paper material upload nahi hua. Pehle past paper ko doc_type 'past_paper' ke saath upload karein.",
+            }
+        questions = generate_past_questions(topic, chunks)
+        return {"intent": intent, "topic": topic, "answer": questions}
     return {
-        "intent": intent,
-        "answer": "Ye feature abhi ban raha hai. Past paper agle step me aayega.",
-        
-    }
+           "intent": intent,
+           "answer": "Is sawal ko samajh nahi aaya. Kisi topic ke baare me poochein, jaise 'structures' ya 'threats'.",
+       }

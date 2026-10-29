@@ -48,3 +48,41 @@ Notes:
             "questions": [],
             "error": "Quiz generate nahi ho saka. Dobara try karein.",
         }
+def generate_past_questions(topic: str, chunks: list[str], num_questions: int = 5) -> dict:
+    context = "\n\n".join(chunks)
+
+    prompt = f"""You are helping a student prepare for an exam.
+Based ONLY on the past paper material below, write {num_questions} exam-style questions about the topic "{topic}".
+Mix short-answer and long-answer questions. Do not use outside knowledge.
+
+Reply with ONLY a JSON object in this exact format, with no extra text:
+{{
+  "topic": "{topic}",
+  "questions": [
+    {{
+      "question": "question text",
+      "type": "short or long"
+    }}
+  ]
+}}
+
+Past paper material:
+{context}"""
+
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {
+            "topic": topic,
+            "questions": [],
+            "error": "Past paper questions generate nahi ho sake. Dobara try karein.",
+        }    
