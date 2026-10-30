@@ -4,44 +4,51 @@ import { useState } from "react";
 
 const API_BASE = "http://127.0.0.1:8000";
 
-export default function AgentPanel() {
-  const [request, setRequest] = useState("");
+const PROMPTS: Record<string, (t: string) => string> = {
+  search: (t) => `Search my notes for ${t}`,
+  summary: (t) => `Summarize the ${t} topic`,
+  quiz: (t) => `Make a quiz on the ${t} topic`,
+  past_paper: (t) => `Give me past paper questions on the ${t} topic`,
+};
+
+export default function AgentPanel({ mode, placeholder }: { mode: string; placeholder: string }) {
+  const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState<any>(null);
 
   async function ask() {
-    if (!request.trim()) return;
+    if (!text.trim()) return;
     setLoading(true);
     setError("");
     setData(null);
     try {
+      const request = PROMPTS[mode](text.trim());
       const params = new URLSearchParams({ request });
       const res = await fetch(`${API_BASE}/agent?${params.toString()}`);
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       setData(await res.json());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kuch galat ho gaya");
+      setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ marginTop: 24 }}>
-      <h2>Ask your notes</h2>
+    <div>
       <div style={{ display: "flex", gap: 8 }}>
         <input
-          value={request}
-          onChange={(e) => setRequest(e.target.value)}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") ask();
           }}
-          placeholder="e.g. Make a quiz on the information security topic"
+          placeholder={placeholder}
           style={{ flex: 1, padding: 8 }}
         />
         <button onClick={ask} disabled={loading} style={{ padding: "8px 16px" }}>
-          {loading ? "Soch raha hai..." : "Ask"}
+          {loading ? "Loading..." : "Go"}
         </button>
       </div>
 
@@ -58,7 +65,7 @@ function AgentResult({ data }: { data: any }) {
     return (
       <div>
         <h3>Search results for: {topic}</h3>
-        {results.length === 0 && <p>Kuch nahi mila.</p>}
+        {results.length === 0 && <p>Nothing found.</p>}
         <ol>
           {results.map((r: string, i: number) => (
             <li key={i} style={{ marginBottom: 8 }}>{r}</li>
